@@ -1,6 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { generateCodeStream } from '../services/api';
 import { Code, Loader, User } from 'lucide-react';
+import { generateCodeStream } from '../services/api';
+
+// 确保 generateCodeStream 返回 AsyncIterable<any> 或 AsyncGenerator<any, any, any>
+// 如果 generateCodeStream 不是 async generator，需要在 ../services/api 里调整其实现
+
 
 interface CodeAssistantProps {
   setFiles: React.Dispatch<React.SetStateAction<any[]>>;
@@ -60,16 +64,25 @@ const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files }) => {
     setQuestion(fields);
     try {
       let code = '';
-      // 假设 generateCodeStream 返回 {name, type, contentChunk}
-      for await (const chunkObj of generateCodeStream(fields)) {
-        // chunkObj: { name, type, contentChunk }
-        const { name, type, contentChunk } = typeof chunkObj === 'string' ? { name: 'Demo.java', type: 'java', contentChunk: chunkObj } : chunkObj;
+      // 生成唯一标题，优先用提问摘要
+      const titleBase = fields.trim().slice(0, 20) || '生成内容';
+      let uniqueName = titleBase;
+      let suffix = 1;
+      // 保证标题唯一
+      while (files.some(f => f.name === uniqueName)) {
+        uniqueName = `${titleBase}_${suffix++}`;
+      }
+      // 确保 generateCodeStream 返回 AsyncIterable<any> 或 AsyncGenerator<any, any, any>
+      // 如果不是，需要在 ../services/api 里调整 generateCodeStream 的实现
+      for await (const chunkObj of generateCodeStream(fields) as AsyncIterable<any>) {
+        const { name, type, contentChunk } = typeof chunkObj === 'string' ? { name: uniqueName, type: 'java', contentChunk: chunkObj } : { ...chunkObj, name: uniqueName };
         code += contentChunk;
         setResult(code);
         setFiles(prevFiles => {
+          // 判断是否追加到当前卡片还是新建
           const idx = prevFiles.findIndex(f => f.name === name);
           if (idx === -1) {
-            // 新文件
+            // 新建卡片
             return [...prevFiles, { name, type, content: contentChunk }];
           } else {
             // 追加内容

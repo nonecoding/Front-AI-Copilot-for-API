@@ -4,13 +4,7 @@ import Sidebar from './components/Sidebar';
 import GeneratedFiles from './components/GeneratedFiles';
 
 function App() {
-  const [files, setFiles] = useState([
-    {
-      name: 'Demo.java',
-      type: 'java',
-      content: 'public class Demo {\n    private Long id;\n    private String name;\n}'
-    }
-  ]);
+  const [files, setFiles] = useState<any[]>([]);
 
   return (
     <div className="min-h-screen bg-[#0E1525] text-white flex flex-col">

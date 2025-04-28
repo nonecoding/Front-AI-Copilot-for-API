@@ -58,6 +58,7 @@ const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files }) => {
       setError('请输入实体字段描述');
       return;
     }
+    setFiles([]); // 先清空中间区域内容
     setLoading(true);
     setError('');
     setResult('');
@@ -72,20 +73,15 @@ const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files }) => {
       while (files.some(f => f.name === uniqueName)) {
         uniqueName = `${titleBase}_${suffix++}`;
       }
-      // 确保 generateCodeStream 返回 AsyncIterable<any> 或 AsyncGenerator<any, any, any>
-      // 如果不是，需要在 ../services/api 里调整 generateCodeStream 的实现
       for await (const chunkObj of generateCodeStream(fields) as AsyncIterable<any>) {
         const { name, type, contentChunk } = typeof chunkObj === 'string' ? { name: uniqueName, type: 'java', contentChunk: chunkObj } : { ...chunkObj, name: uniqueName };
         code += contentChunk;
         setResult(code);
         setFiles(prevFiles => {
-          // 判断是否追加到当前卡片还是新建
           const idx = prevFiles.findIndex(f => f.name === name);
           if (idx === -1) {
-            // 新建卡片
             return [...prevFiles, { name, type, content: contentChunk }];
           } else {
-            // 追加内容
             const updated = [...prevFiles];
             updated[idx] = { ...updated[idx], content: updated[idx].content + contentChunk };
             return updated;

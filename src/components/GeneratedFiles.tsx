@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface GeneratedFile {
   name: string;
@@ -26,6 +26,12 @@ const getLanguageClass = (type: string) => {
 };
 
 const GeneratedFiles: React.FC<GeneratedFilesProps> = ({ files }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [files]);
   if (!files || files.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -33,9 +39,8 @@ const GeneratedFiles: React.FC<GeneratedFilesProps> = ({ files }) => {
       </div>
     );
   }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-auto max-h-[calc(100vh-160px)]" ref={containerRef}>
       {files.map((file, idx) => (
         <div key={idx} className="bg-[#232B3E] rounded-lg shadow p-4 border border-[#2B3245]">
           <div className="flex items-center mb-2">

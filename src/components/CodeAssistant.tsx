@@ -9,6 +9,40 @@ const CodeAssistant: React.FC = () => {
   const [error, setError] = useState('');
   const [question, setQuestion] = useState<string>('');
   const resultRef = useRef<HTMLDivElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File|null>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle'|'uploading'|'success'|'error'>('idle');
+  const [uploadMsg, setUploadMsg] = useState<string>('');
+
+  // 文件上传副作用
+  React.useEffect(() => {
+    const uploadFile = async () => {
+      if (!selectedFile) return;
+      setUploadStatus('uploading');
+      setUploadMsg('');
+      try {
+        const formData = new FormData();
+        formData.append('multipartFile', selectedFile);
+        const resp = await fetch('/api/codegen/uploadToMinIo', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.code === 200) {
+          setUploadStatus('success');
+          setUploadMsg('上传成功OK');
+        } else {
+          setUploadStatus('error');
+          setUploadMsg('上传失败failure');
+        }
+      } catch (e: any) {
+        setUploadStatus('error');
+        setUploadMsg('上传失败: ' + (e.message || '网络错误'));
+      }
+    };
+    if (selectedFile) {
+      uploadFile();
+    }
+  }, [selectedFile]);
 
   const handleSubmit = async () => {
     if (!fields) {
@@ -57,6 +91,29 @@ const CodeAssistant: React.FC = () => {
               className="w-full h-24 bg-[#0E1525] border border-[#2B3245] rounded p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               disabled={loading}
             />
+            {/* 上传文件区域 */}
+            <div className="flex items-center mt-2 gap-2">
+              <label htmlFor="file-upload" className="cursor-pointer flex items-center text-gray-400 hover:text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.586-6.586a4 4 0 10-5.656-5.656l-6.586 6.586a6 6 0 108.486 8.486l6.586-6.586" /></svg>
+                <span>上传文档/图片</span>
+                <input id="file-upload" type="file" className="hidden" multiple={false} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setSelectedFile(e.target.files[0]);
+                    e.target.value = "";
+                  }
+                }} />
+              </label>
+              {/* 文件预览区域 */}
+              {selectedFile && (
+                <div className="mt-2 text-sm text-gray-300">
+                  <span>已选择文件：</span>{selectedFile.name}
+                  {uploadStatus === 'uploading' && <span className="ml-2 text-blue-400">上传中...</span>}
+                  {uploadStatus === 'success' && <span className="ml-2 text-green-400">{uploadMsg}</span>}
+                  {uploadStatus === 'error' && <span className="ml-2 text-red-400">{uploadMsg}</span>}
+                </div>
+              )}
+              {/* 这里后续会根据 state 展示上传的文件名或缩略图 */}
+            </div>
             <button
               onClick={handleSubmit}
               disabled={loading}

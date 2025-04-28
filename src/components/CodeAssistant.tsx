@@ -2,7 +2,12 @@ import React, { useState, useRef } from 'react';
 import { generateCodeStream } from '../services/api';
 import { Code, Loader, User } from 'lucide-react';
 
-const CodeAssistant: React.FC = () => {
+interface CodeAssistantProps {
+  setFiles: React.Dispatch<React.SetStateAction<any[]>>;
+  files: any[];
+}
+
+const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files }) => {
   const [fields, setFields] = useState('');
   const [result, setResult] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -55,10 +60,24 @@ const CodeAssistant: React.FC = () => {
     setQuestion(fields);
     try {
       let code = '';
-      for await (const chunk of generateCodeStream(fields)) {
-        code += chunk;
+      // 假设 generateCodeStream 返回 {name, type, contentChunk}
+      for await (const chunkObj of generateCodeStream(fields)) {
+        // chunkObj: { name, type, contentChunk }
+        const { name, type, contentChunk } = typeof chunkObj === 'string' ? { name: 'Demo.java', type: 'java', contentChunk: chunkObj } : chunkObj;
+        code += contentChunk;
         setResult(code);
-        // 滚动到底部
+        setFiles(prevFiles => {
+          const idx = prevFiles.findIndex(f => f.name === name);
+          if (idx === -1) {
+            // 新文件
+            return [...prevFiles, { name, type, content: contentChunk }];
+          } else {
+            // 追加内容
+            const updated = [...prevFiles];
+            updated[idx] = { ...updated[idx], content: updated[idx].content + contentChunk };
+            return updated;
+          }
+        });
         setTimeout(() => {
           resultRef.current?.scrollTo({ top: resultRef.current.scrollHeight, behavior: 'smooth' });
         }, 0);

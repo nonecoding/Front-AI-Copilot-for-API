@@ -9,9 +9,10 @@ import { generateCodeStream } from '../services/api';
 interface CodeAssistantProps {
   setFiles: React.Dispatch<React.SetStateAction<any[]>>;
   files: any[];
+  handleAddTab: (title: string, files: any[]) => void;
 }
 
-const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files }) => {
+const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files, handleAddTab }) => {
   const [fields, setFields] = useState('');
   const [result, setResult] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -58,38 +59,38 @@ const CodeAssistant: React.FC<CodeAssistantProps> = ({ setFiles, files }) => {
       setError('请输入实体字段描述');
       return;
     }
-    setFiles([]); // 先清空中间区域内容
     setLoading(true);
     setError('');
     setResult('');
     setQuestion(fields);
     try {
       let code = '';
-      // 生成唯一标题，优先用提问摘要
       const titleBase = fields.trim().slice(0, 20) || '生成内容';
       let uniqueName = titleBase;
       let suffix = 1;
-      // 保证标题唯一
-      while (files.some(f => f.name === uniqueName)) {
-        uniqueName = `${titleBase}_${suffix++}`;
+      if (files && files.length > 0 && files.some(f => f.title === uniqueName)) {
+        uniqueName = files.find(f => f.title === uniqueName)?.title || uniqueName;
+      } else {
+        while (files.some(f => f.title === uniqueName)) {
+          uniqueName = `${titleBase}_${suffix++}`;
+        }
       }
+      // 先创建标签页（内容为空）
+      const tabId = Date.now().toString();
+      const initialFileArr = [{ name: uniqueName, type: 'java', content: '' }];
+      // 新建标签页并激活
+      handleAddTab(uniqueName, initialFileArr);
+      // 流式追加内容
       for await (const chunkObj of generateCodeStream(fields) as AsyncIterable<any>) {
         const { name, type, contentChunk } = typeof chunkObj === 'string' ? { name: uniqueName, type: 'java', contentChunk: chunkObj } : { ...chunkObj, name: uniqueName };
         code += contentChunk;
         setResult(code);
-        setFiles(prevFiles => {
-          const idx = prevFiles.findIndex(f => f.name === name);
-          if (idx === -1) {
-            return [...prevFiles, { name, type, content: contentChunk }];
-          } else {
-            const updated = [...prevFiles];
-            updated[idx] = { ...updated[idx], content: updated[idx].content + contentChunk };
-            return updated;
-          }
-        });
-        setTimeout(() => {
-          resultRef.current?.scrollTo({ top: resultRef.current.scrollHeight, behavior: 'smooth' });
-        }, 0);
+        // 追加内容到对应标签页
+        setFiles(prevTabs => prevTabs.map(tab =>
+          tab.title === uniqueName
+            ? { ...tab, files: [{ name, type, content: code }] }
+            : tab
+        ));
       }
     } catch (err: any) {
       setError(err.message || '生成代码失败');

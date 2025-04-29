@@ -65,17 +65,19 @@ const GeneratedFiles: React.FC<GeneratedFilesProps> = ({ tabs, activeTabId, onTa
         ))}
       </div>
       {/* 当前标签内容 */}
-      <div className="space-y-6 overflow-auto flex-1 max-h-[calc(100vh-200px)]" ref={containerRef}>
+      <div className="space-y-6 flex-1">
         {activeTab && activeTab.files.map((file, idx) => (
           <div key={idx} className="bg-[#232B3E] rounded-lg shadow p-4 border border-[#2B3245]">
             <div className="flex items-center mb-2">
               <span className="font-semibold text-blue-400 mr-2">{file.name}</span>
               <span className="text-xs text-gray-400 bg-[#1C2333] rounded px-2 py-0.5 ml-2">{file.type}</span>
             </div>
-            <pre className={`whitespace-pre-wrap text-sm text-gray-200 overflow-x-auto ${getLanguageClass(file.type)}`}
-              style={{ minHeight: 40 }}
-              data-testid={`file-content-${file.name}`}
-            >{file.content}</pre>
+            <div className="overflow-auto max-h-[400px]">
+              <pre className={`whitespace-pre-wrap text-sm text-gray-200 overflow-x-auto ${getLanguageClass(file.type)}`}
+                style={{ minHeight: 40 }}
+                data-testid={`file-content-${file.name}`}
+              >{file.content}</pre>
+            </div>
           </div>
         ))}
       </div>
